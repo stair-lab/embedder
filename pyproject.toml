@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "EmbedTextPackage"
+version = "0.0.1"
+authors = [
+  { name="Luca Morlok", email="luca.morlok@stanford.edu" },
+]
+description = "A small package providing a function for embedding extraction"
+readme = "README.md"
+requires-python = ">=3.8"
+
+[project.urls]
+Homepage = "https://github.com/stair-lab/embedder"
