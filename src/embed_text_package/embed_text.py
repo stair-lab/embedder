@@ -31,11 +31,11 @@ def get_embeddings(sentence_batches: list, model, tokenizer):
 
     emb_batches = []
 
-    for batch_i in range(len(sentence_batches)):
+    for batch in sentence_batches:
         batch_emb = []
-        for sen_j in range(len(sentence_batches[batch_i])):
+        for sentence in batch:
             # 1) Get Tokens of sentence
-            sentence_tokens = tokenizer(sentence_batches[sen_j])["input_ids"]
+            sentence_tokens = tokenizer(sentence)["input_ids"]
 
             # 2) Get Embeddings (hiddenstate of last input)
             # Generate model inputs on same device as model
