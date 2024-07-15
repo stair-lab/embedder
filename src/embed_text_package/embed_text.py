@@ -3,6 +3,7 @@ embed_text package
 """
 
 import torch
+from tqdm import tqdm
 
 
 def get_embeddings(sentence_batches: list, model, tokenizer):
@@ -31,7 +32,8 @@ def get_embeddings(sentence_batches: list, model, tokenizer):
 
     emb_batches = []
 
-    for batch in sentence_batches:
+    for batch in tqdm(sentence_batches,
+                      ascii=True, desc="Embedding Batches..."):
         batch_emb = []
         for sentence in batch:
             # 1) Get Tokens of sentence
