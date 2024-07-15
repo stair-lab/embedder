@@ -30,12 +30,12 @@ def get_embeddings(sentence_batches: list, model, tokenizer):
     # Maybe tokenizer class is "Autotokenizer" (from transformer)
 
     emb_batches = []
-    batch_emb = []
 
-    for batch in sentence_batches:
-        for sentence in batch:
+    for batch_i in range(len(sentence_batches)):
+        batch_emb = []
+        for sen_j in range(len(sentence_batches[batch_i])):
             # 1) Get Tokens of sentence
-            sentence_tokens = tokenizer(sentence)["input_ids"]
+            sentence_tokens = tokenizer(sentence_batches[sen_j])["input_ids"]
 
             # 2) Get Embeddings (hiddenstate of last input)
             # Generate model inputs on same device as model
