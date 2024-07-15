@@ -1,3 +1,7 @@
+"""
+embed_text package
+"""
+
 import torch
 
 
@@ -20,6 +24,7 @@ def get_embeddings(sentence_batches: list(list(str)), model, tokenizer):
     :return: Embeddings of each Sentence
     :rtype: list(list(sentence_emb))
     """
+
     # for model and tokenizer class, I am not sure.
     # I think model class is LlamaForCausalLM
     # Maybe tokenizer class is "Autotokenizer" (from transformer)
