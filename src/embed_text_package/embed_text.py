@@ -5,7 +5,7 @@ embed_text package
 import torch
 
 
-def get_embeddings(sentence_batches: list(list(str)), model, tokenizer):
+def get_embeddings(sentence_batches: list, model, tokenizer):
     """
     Function converts sentences into tokens and passes tokens
     through model to get the sentence embedding. Designed to take
@@ -35,7 +35,7 @@ def get_embeddings(sentence_batches: list(list(str)), model, tokenizer):
     for batch in sentence_batches:
         for sentence in batch:
             # 1) Get Tokens of sentence
-            sentence_tokens = tokenizer(sentence)["tokens"]
+            sentence_tokens = tokenizer(sentence)["input_ids"]
 
             # 2) Get Embeddings (hiddenstate of last input)
             # Generate model inputs on same device as model
