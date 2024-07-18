@@ -27,9 +27,14 @@ def test_workflow():
 
 
     # Check dimension:
-    assert(len(batches_sentences[0]) == batch_size) #batch
-    # missing: check hidden_size
-    # missing: check num of batches
+    assert(len(emb[0]) == batch_size)
+    assert(len(emb[0][0]) == model.config.hidden_size)
+    # Time-reasons: only do first and last batch for now
+    #if len(dataset)%batch_size != 0:
+    #   assert(len(dataset)//batch_size +1 == len(emb))
+    #else:
+    #    assert(len(dataset)//batch_size == len(emb))
+
 
 
 if __name__ == "__main__":
