@@ -18,3 +18,14 @@ Then you can call the get_embeddings() function by
 embed_text.get_embeddings(BatchesSentences,model,tokenizer)
 ```
 Where `BatchesSentences` should be of type `list(list(str))`,`model` should be of type `...tbd...` and `tokenizer` should be of type `...tbd...`
+
+
+## How to test:
+First, within your environment, install the package pytest.
+```bash
+pip install pytest
+```
+Then, cd to main folder of the package ("embedder") and type:
+```bash
+pytest
+```
