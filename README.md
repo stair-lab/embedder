@@ -16,7 +16,7 @@ from embed_text_package.embed_text import Embedder
 Then you can initialize an embedder, load the model and call it:
 > **_NOTE:_** the load() function will load both, the model and embedder.
 ```bash
-model_name = "HF_repo/HF_model"
+model_name = "<HF_repo>/<HF_model>"
 embdr = Embedder()
 embdr.load(model_name)
 emb = embdr.get_embeddings(batches_sentences, model_name)
