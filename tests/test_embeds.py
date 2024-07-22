@@ -2,7 +2,6 @@
 from embed_text_package.embed_text import Embedder
 from tqdm import tqdm
 from datasets import load_dataset
-from transformers import AutoTokenizer
 from transformers import AutoModel
 
 # Load dataset:
@@ -14,6 +13,7 @@ model_name = "meta-llama/Llama-2-7b-hf"
 # Load embedder:
 embdr = Embedder()
 embdr.load(model_name)
+
 
 def test_workflow():
 
@@ -28,18 +28,16 @@ def test_workflow():
     # get embeddings
     emb = embdr.get_embeddings(batches_sentences, model_name)
 
-
     # Check dimension:
-    assert(len(emb[0]) == batch_size)
+    assert (len(emb[0]) == batch_size)
     # load model to check dimensions
     model = AutoModel.from_pretrained(model_name)
-    assert(len(emb[0][0]) == model.config.hidden_size)
+    assert (len(emb[0][0]) == model.config.hidden_size)
     # Time-reasons: only do first and last batch for now
-    #if len(dataset)%batch_size != 0:
-    #   assert(len(dataset)//batch_size +1 == len(emb))
-    #else:
-    #    assert(len(dataset)//batch_size == len(emb))
-
+    # if len(dataset)%batch_size != 0:
+    #    assert (len(dataset)//batch_size +1 == len(emb))
+    # else:
+    #     assert (len(dataset)//batch_size == len(emb))
 
 
 if __name__ == "__main__":
