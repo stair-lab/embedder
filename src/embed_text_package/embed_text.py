@@ -3,73 +3,111 @@ embed_text package
 """
 
 import torch
+import gc
 from tqdm import tqdm
 from transformers import AutoTokenizer
 from transformers import AutoModel
 
 
-def get_embeddings(sentence_batches: list,
-                   model: AutoModel, tokenizer: AutoTokenizer):
-    """
-    Function converts sentences into tokens and passes tokens
-    through model to get the sentence embedding. Designed to take
-    multiple batches containing multiple sentences as input.
-    Here, one sentence is defined in one string (str)
+class Embedder:
 
-    :param sentence_batches: A list of lists (batches) of sentences
-    :type sentence_batches: list(list(string))
-    :param model: LLM-style model that transforms tokens & attention mask
-        to embeddings
-    :type model: tbd
-    :param tokenizer: Tokenizer mapping strings to key-values
-    :type tokenizer: tbd
+    def __init__(self):
+        """
+        Initialize class object.
+        """
+        # do nothing
 
-    :return: Embeddings of each Sentence
-    :rtype: list(list(sentence_emb))
-    """
+    def load(self, model_name: str):
+        """
+        Loads class variables: model and tokenizer.
 
-    # for model and tokenizer class, I am not sure.
-    # I think model class is LlamaForCausalLM
-    # Maybe tokenizer class is "Autotokenizer" (from transformer)
+        :param model_name: HF model name (used for model and tokenizer)
+                           format: "hf_repo/hf_model"
+        :type model_name: str
+        :param self.model: LLM-style model that transforms tokens & attention
+        mask to embeddings
+        :type self.model: AutoModel
+        :param tokenizer: Tokenizer mapping strings to key-values
+        :type tokenizer: AutoTokenizer
+        :param which_model: Variable storing the name of the loaded model
+        :type which_model: str
+        """
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModel.from_pretrained(model_name).to('cuda')
+        self.which_model = model_name
 
-    emb_batches = []
+    def unload(self):
+        """
+        Unloads class variables: model and tokenizer
+        """
+        del self.tokenizer
+        del self.model
+        self.tokenizer = None
+        self.model = None
+        gc.collect()
+        torch.cuda.empty_cache()
 
-    for batch in tqdm(sentence_batches,
-                      ascii=True, desc="Embedding Batches..."):
-        batch_emb = []
-        for sentence in batch:
-            # 1) Get Tokens of sentence
+    def get_embeddings(self, sentence_batches: list, model_name: str):
+        """
+        Function converts sentences into tokens and passes tokens
+        through model to get the sentence embedding. Designed to take
+        multiple batches containing multiple sentences as input.
+        Here, one sentence is defined in one string (str)
 
-            sentence_tokens = tokenizer(sentence)["input_ids"]
+        :param sentence_batches: A list of lists (batches) of sentences
+        :type sentence_batches: list(list(string))
+        :param model_name: HF model name (used for model and tokenizer)
+                           format: "hf_repo/hf_model"
+        :type model_name: str
 
-            # 2) Get Embeddings (hiddenstate of last input)
-            # Generate model inputs on same device as model
-            # att_mask is vector of ones: we want attention on all tokens
 
-            tokens = torch.tensor([sentence_tokens], device=model.device)
-            # >>>  sequence_length
+        :return: Embeddings of each Sentence
+        :rtype: list(list(sentence_emb))
+        """
+        assert model_name == self.which_model, \
+            f"Model '{model_name}' is not preloaded. Loaded model is \
+            '{self.which_model}'. Load the correct model by calling the load \
+            function."
 
-            att_mask = torch.tensor([[1] * len(sentence_tokens)],
-                                    device=model.device)
-            # >>>  sequence_length
+        emb_batches = []
 
-            # get embedding by calling forward function of main model.
-            ##################################################################
-            # TODO: implement model.forward in vectorized manner.
-            # NOTE: Check performance difference, take care of padding!
-            # model.forward().last_hidden_state has dimension:
-            # >>> batch_size x sequence_length x hidden_size
-            ##################################################################
-            sentence_emb = model.forward(
-                input_ids=tokens,
-                attention_mask=att_mask).last_hidden_state[0][-1]\
-                .squeeze().detach().cpu().tolist()
-            # >>> hidden_size
+        for batch in tqdm(sentence_batches,
+                          ascii=True, desc="Embedding Batches..."):
+            batch_emb = []
+            for sentence in batch:
+                # 1) Get Tokens of sentence
 
-            # Now just handle list structure.
-            batch_emb.append(sentence_emb)
-            # >>> batch_size x hidden_size
+                sentence_tokens = self.tokenizer(sentence)["input_ids"]
 
-        emb_batches.append(batch_emb)
-        # >>> num_batches x batch_size x hidden_size
-    return emb_batches
+                # 2) Get Embeddings (hiddenstate of last input)
+                # Generate model inputs on same device as self.model
+                # att_mask is vector of ones: we want attention on all tokens
+
+                tokens = torch.tensor([sentence_tokens],
+                                      device=self.model.device)
+                # >>>  sequence_length
+
+                att_mask = torch.tensor([[1] * len(sentence_tokens)],
+                                        device=self.model.device)
+                # >>>  sequence_length
+
+                # get embedding by calling forward function of main self.model.
+                ###############################################################
+                # TODO: implement self.model.forward in vectorized manner.
+                # NOTE: Check performance difference, take care of padding!
+                # self.model.forward().last_hidden_state has dimension:
+                # >>> batch_size x sequence_length x hidden_size
+                ###############################################################
+                sentence_emb = self.model.forward(
+                    input_ids=tokens,
+                    attention_mask=att_mask).last_hidden_state[0][-1]\
+                    .squeeze().detach().cpu().tolist()
+                # >>> hidden_size
+
+                # Now just handle list structure.
+                batch_emb.append(sentence_emb)
+                # >>> batch_size x hidden_size
+
+            emb_batches.append(batch_emb)
+            # >>> num_batches x batch_size x hidden_size
+        return emb_batches

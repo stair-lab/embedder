@@ -8,16 +8,21 @@ First, within your environment, install the package.
 ```bash
 pip install git+https://github.com/stair-lab/embedder.git
 ```
-In your script, include the package:
+In your script, include the module:
 ```bash
-from embed_text_package import embed_text
+from embed_text_package.embed_text import Embedder
 ```
 
-Then you can call the get_embeddings() function by
+Then you can initialize an embedder, load the model and call it:
+> **_NOTE:_** the load() function will load both, the model and embedder.
 ```bash
-embed_text.get_embeddings(BatchesSentences,model,tokenizer)
+model_name = "HF_repo/HF_model"
+embdr = Embedder()
+embdr.load(model_name)
+emb = embdr.get_embeddings(batches_sentences, model_name)
 ```
-Where `BatchesSentences` should be of type `list(list(str))`,`model` should be of type `...tbd...` and `tokenizer` should be of type `...tbd...`
+Where `BatchesSentences` is type `list(list(str))` and 
+`model_name` is type `str`
 
 
 ## How to test:
