@@ -1,6 +1,6 @@
 ## Embedding funciton
 This python package converts sentences into tokens and passes tokens
-through a model to get the sentence embedding. It's designed to take
+through a model to get the sentence embedding. It`s designed to take
 multiple batches containing multiple sentences as input.
 
 ## How to use:

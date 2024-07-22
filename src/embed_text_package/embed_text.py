@@ -1,21 +1,25 @@
 """
 embed_text package
 """
-
-import torch
 import gc
+import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer
 from transformers import AutoModel
 
 
 class Embedder:
+    """
+    Instances of this class can embed sentences to embeddings.
+    """
 
     def __init__(self):
         """
         Initialize class object.
         """
-        # do nothing
+        self.tokenizer = None
+        self.model = None
+        self.which_model = None
 
     def load(self, model_name: str):
         """
@@ -27,13 +31,13 @@ class Embedder:
         :param self.model: LLM-style model that transforms tokens & attention
         mask to embeddings
         :type self.model: AutoModel
-        :param tokenizer: Tokenizer mapping strings to key-values
-        :type tokenizer: AutoTokenizer
+        :param self.tokenizer: Tokenizer mapping strings to key-values
+        :type self.tokenizer: AutoTokenizer
         :param which_model: Variable storing the name of the loaded model
         :type which_model: str
         """
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModel.from_pretrained(model_name).to('cuda')
+        self.model = AutoModel.from_pretrained(model_name).to("cuda")
         self.which_model = model_name
 
     def unload(self):
@@ -64,15 +68,17 @@ class Embedder:
         :return: Embeddings of each Sentence
         :rtype: list(list(sentence_emb))
         """
-        assert model_name == self.which_model, \
-            f"Model '{model_name}' is not preloaded. Loaded model is \
+        assert (
+            model_name == self.which_model
+        ), f"Model '{model_name}' is not preloaded. Loaded model is \
             '{self.which_model}'. Load the correct model by calling the load \
             function."
 
         emb_batches = []
 
-        for batch in tqdm(sentence_batches,
-                          ascii=True, desc="Embedding Batches..."):
+        for batch in tqdm(
+            sentence_batches, ascii=True, desc="Embedding Batches..."
+        ):
             batch_emb = []
             for sentence in batch:
                 # 1) Get Tokens of sentence
@@ -83,25 +89,33 @@ class Embedder:
                 # Generate model inputs on same device as self.model
                 # att_mask is vector of ones: we want attention on all tokens
 
-                tokens = torch.tensor([sentence_tokens],
-                                      device=self.model.device)
+                tokens = torch.tensor(
+                    [sentence_tokens], device=self.model.device
+                )
                 # >>>  sequence_length
 
-                att_mask = torch.tensor([[1] * len(sentence_tokens)],
-                                        device=self.model.device)
+                att_mask = torch.tensor(
+                    [[1] * len(sentence_tokens)], device=self.model.device
+                )
                 # >>>  sequence_length
 
                 # get embedding by calling forward function of main self.model.
                 ###############################################################
-                # TODO: implement self.model.forward in vectorized manner.
-                # NOTE: Check performance difference, take care of padding!
+                # NOTE: One could implement self.model.forward in vectorized
+                # manner. Check performance difference, take care of padding!
                 # self.model.forward().last_hidden_state has dimension:
                 # >>> batch_size x sequence_length x hidden_size
                 ###############################################################
-                sentence_emb = self.model.forward(
-                    input_ids=tokens,
-                    attention_mask=att_mask).last_hidden_state[0][-1]\
-                    .squeeze().detach().cpu().tolist()
+                sentence_emb = (
+                    self.model.forward(
+                        input_ids=tokens, attention_mask=att_mask
+                    )
+                    .last_hidden_state[0][-1]
+                    .squeeze()
+                    .detach()
+                    .cpu()
+                    .tolist()
+                )
                 # >>> hidden_size
 
                 # Now just handle list structure.
