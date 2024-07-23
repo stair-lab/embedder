@@ -1,44 +1,71 @@
 """
 Tests the embed_text module.
 """
-
 from torch.utils.data import DataLoader
 from datasets import load_dataset, Dataset
-from transformers import AutoModel
+from transformers import AutoModel, AutoConfig
 from embed_text_package.embed_text import Embedder
+import wandb
+import numpy as np
 
-# Load dataset:
-dataset = load_dataset("proteinea/fluorescence")["test"]
-dataset = Dataset.from_dict(dataset[0:1000])  # only first 1000 sentences!
-cols_to_be_embded = ["primary"]
-BATCH_SIZE = 64
-
-# Used model & Tokenizer:
-MODEL_NAME = "meta-llama/Llama-2-7b-hf"
-
-# Load embedder:
-embdr = Embedder()
-embdr.load(MODEL_NAME)
-
-
+# TEST DIFFERENT MODEL SIZES ITERATIVELY (small --> large)
+# Nested for-loop
 def test_workflow():
     """
     test workflow and check dimensions of output.
     """
-    # prepare data
-    dataloader = DataLoader(dataset.with_format("torch"), BATCH_SIZE)
 
-    # get embeddings
-    emb = embdr.get_embeddings(dataloader, MODEL_NAME, cols_to_be_embded)
+    dataset_names = ["proteinea/fluorescence", "allenai/reward-bench"]
+    ds_split_fluor = "test"
+    ds_split_rwben = "raw"
 
-    # load model to check dimensions
-    model = AutoModel.from_pretrained(MODEL_NAME)
+    # Load dataset:
+    cols_to_be_embded_fluor = ["primary"]
+    cols_to_be_embded_rwben = ["prompt"]
+    batch_sizes = [4,8,16]
 
-    # Check dimension:
-    assert len(emb) == len(dataset)
-    for col in cols_to_be_embded:
-        assert len(emb[col][0]) == model.config.hidden_size
+    # Used model & Tokenizer:
+    model_names = ["meta-llama/Llama-2-7b-hf", "meta-llama/Llama-2-70b-hf"]
+    # no problems with meta-llama/Llama-2-7b-hf (bs: 16,32,64)! :)
 
+    for model_name in model_names:
+        print(f"model_name = {model_name}\n")
+        # Load embedder:
+        embdr = Embedder()
+        embdr.load(model_name)
+
+        # load model to check dimensions
+        config = AutoConfig.from_pretrained(model_name)
+
+        for ds_name in dataset_names:
+            if ds_name == "proteinea/fluorescence":
+                cols_to_be_embded = cols_to_be_embded_fluor
+                ds_split = ds_split_fluor
+            if ds_name == "allenai/reward-bench":
+                cols_to_be_embded = cols_to_be_embded_rwben
+                ds_split = ds_split_rwben
+            print(f"dataset_name = {ds_name}\n")
+            dataset = load_dataset(ds_name)[ds_split]
+
+            for bs in batch_sizes:
+                print(f"batch_size = {bs}\n")
+                for _ in range(5):
+                    rnd = np.random.randint(low=0, high=len(dataset)-bs*2)
+                    sub_ds = Dataset.from_dict(dataset[rnd:rnd+(bs*2)])
+
+                    # prepare data
+                    dataloader = DataLoader(sub_ds.with_format("torch"), bs)
+
+                    # get embeddings
+                    emb = embdr.get_embeddings(
+                        dataloader, model_name, cols_to_be_embded
+                    )
+
+                    # Check dimension:
+                    assert len(emb) == len(sub_ds)
+                    for col in cols_to_be_embded:
+                        assert len(emb[col][0]) == config.hidden_size
+            
 
 if __name__ == "__main__":
     test_workflow()

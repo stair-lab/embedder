@@ -86,7 +86,9 @@ class Embedder:
             col_emb = []
             tqdm_dataloader = tqdm(dataloader)
             for batch in tqdm_dataloader:
-                tqdm_dataloader.set_description("Embedding sentences")
+                tqdm_dataloader.set_description(
+                    f"Embedding sentences in '{col}' on '{self.model.device}'"
+                )
 
                 for sentence in batch[col]:
                     # 1) Get Tokens of sentence
