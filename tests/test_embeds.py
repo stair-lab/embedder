@@ -21,11 +21,11 @@ def test_workflow():
     # Load dataset:
     cols_to_be_embded_fluor = ["primary"]
     cols_to_be_embded_rwben = ["prompt"]
-    batch_sizes = [4,8,16]
+    batch_sizes = [128, 256, 512, 1024]
 
     # Used model & Tokenizer:
     model_names = ["meta-llama/Llama-2-7b-hf", "meta-llama/Llama-2-70b-hf"]
-    # no problems with meta-llama/Llama-2-7b-hf (bs: 16,32,64)! :)
+    # no problems with meta-llama/Llama-2-7b-hf (ds: both, bs: 1024)
 
     for model_name in model_names:
         print(f"model_name = {model_name}\n")
