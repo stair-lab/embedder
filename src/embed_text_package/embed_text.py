@@ -2,74 +2,136 @@
 embed_text package
 """
 
+import gc
 import torch
 from tqdm import tqdm
+from datasets import Dataset
+from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
 from transformers import AutoModel
 
 
-def get_embeddings(sentence_batches: list,
-                   model: AutoModel, tokenizer: AutoTokenizer):
+class Embedder:
     """
-    Function converts sentences into tokens and passes tokens
-    through model to get the sentence embedding. Designed to take
-    multiple batches containing multiple sentences as input.
-    Here, one sentence is defined in one string (str)
-
-    :param sentence_batches: A list of lists (batches) of sentences
-    :type sentence_batches: list(list(string))
-    :param model: LLM-style model that transforms tokens & attention mask
-        to embeddings
-    :type model: tbd
-    :param tokenizer: Tokenizer mapping strings to key-values
-    :type tokenizer: tbd
-
-    :return: Embeddings of each Sentence
-    :rtype: list(list(sentence_emb))
+    Instances of this class can embed sentences to embeddings.
     """
 
-    # for model and tokenizer class, I am not sure.
-    # I think model class is LlamaForCausalLM
-    # Maybe tokenizer class is "Autotokenizer" (from transformer)
+    def __init__(self):
+        """
+        Initialize class object.
+        """
+        self.tokenizer = None
+        self.model = None
+        self.which_model = None
 
-    emb_batches = []
+    def load(self, model_name: str):
+        """
+        Loads class variables: model and tokenizer.
 
-    for batch in tqdm(sentence_batches,
-                      ascii=True, desc="Embedding Batches..."):
-        batch_emb = []
-        for sentence in batch:
-            # 1) Get Tokens of sentence
+        :param model_name: HF model name (used for model and tokenizer)
+                           format: "hf_repo/hf_model"
+        :type model_name: str
+        :param self.model: LLM-style model that transforms tokens & attention
+        mask to embeddings
+        :type self.model: AutoModel
+        :param self.tokenizer: Tokenizer mapping strings to key-values
+        :type self.tokenizer: AutoTokenizer
+        :param which_model: Variable storing the name of the loaded model
+        :type which_model: str
+        """
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModel.from_pretrained(model_name).to("cuda")
+        self.which_model = model_name
 
-            sentence_tokens = tokenizer(sentence)["input_ids"]
+    def unload(self):
+        """
+        Unloads class variables: model and tokenizer
+        """
+        del self.tokenizer
+        del self.model
+        self.tokenizer = None
+        self.model = None
+        gc.collect()
+        torch.cuda.empty_cache()
 
-            # 2) Get Embeddings (hiddenstate of last input)
-            # Generate model inputs on same device as model
-            # att_mask is vector of ones: we want attention on all tokens
+    def get_embeddings(
+        self, dataloader: DataLoader, model_name: str, cols: list
+    ):
+        """
+        Function converts sentences to sentence embeddings. Designed to take
+        dataloader format as input. Dataset of dataloader should contain
+        sentences in string format.
 
-            tokens = torch.tensor([sentence_tokens], device=model.device)
-            # >>>  sequence_length
+        :param dataloader: Dataloader object of pytorch
+        :type dataloader: DataLoader
+        :param model_name: HF model name (used for model and tokenizer)
+                           format: "hf_repo/hf_model"
+        :type model_name: str
+        :param cols: list of column names to be embedded
+        :type cols: list
 
-            att_mask = torch.tensor([[1] * len(sentence_tokens)],
-                                    device=model.device)
-            # >>>  sequence_length
 
-            # get embedding by calling forward function of main model.
-            ##################################################################
-            # TODO: implement model.forward in vectorized manner.
-            # NOTE: Check performance difference, take care of padding!
-            # model.forward().last_hidden_state has dimension:
-            # >>> batch_size x sequence_length x hidden_size
-            ##################################################################
-            sentence_emb = model.forward(
-                input_ids=tokens,
-                attention_mask=att_mask).last_hidden_state[0][-1]\
-                .squeeze().detach().cpu().tolist()
-            # >>> hidden_size
+        :return: Dataset with columns cols and embeddings of sentences
+        :rtype: Dataset
+        """
+        assert (
+            model_name == self.which_model
+        ), f"Model '{model_name}' is not preloaded. Loaded model is \
+            '{self.which_model}'. Load the correct model by calling the load \
+            function."
 
-            # Now just handle list structure.
-            batch_emb.append(sentence_emb)
-            # >>> batch_size x hidden_size
+        emb_dict = {}
 
-        emb_batches.append(batch_emb)
-        # >>> num_batches x batch_size x hidden_size
-    return emb_batches
+        for col in cols:
+            col_emb = []
+            tqdm_dataloader = tqdm(dataloader)
+            for batch in tqdm_dataloader:
+                tqdm_dataloader.set_description(
+                    f"Embedding sentences in '{col}' on '{self.model.device}'"
+                )
+
+                for sentence in batch[col]:
+                    # 1) Get Tokens of sentence
+
+                    sentence_tokens = self.tokenizer(sentence)["input_ids"]
+
+                    # 2) Get Embeddings (hiddenstate of last input)
+                    # Generate model inputs on same device as self.model
+                    # att_mask is vector of ones: Attention on all tokens!
+
+                    tokens = torch.tensor(
+                        [sentence_tokens], device=self.model.device
+                    )
+                    # >>>  sequence_length
+
+                    att_mask = torch.tensor(
+                        [[1] * len(sentence_tokens)], device=self.model.device
+                    )
+                    # >>>  sequence_length
+
+                    # get embedding via forward function of main self.model.
+                    ###########################################################
+                    # NOTE: For performance reasons, one could implement
+                    # self.model.forward in vectorizedmanner.
+                    # If you want to do that, keep padding in mind!
+                    ###########################################################
+                    sentence_emb = (
+                        self.model.forward(
+                            input_ids=tokens, attention_mask=att_mask
+                        )
+                        .last_hidden_state[0][-1]
+                        .squeeze()
+                        .detach()
+                        .cpu()
+                        .tolist()
+                    )
+                    # >>> hidden_size
+
+                    # Now just handle list structure.
+                    col_emb.append(sentence_emb)
+                    # >>> dataset_length x hidden_size
+
+            emb_dict[col] = col_emb
+            # >>> num_cols x dataset_length x hidden_size
+        emb_dataset = Dataset.from_dict(emb_dict)
+        return emb_dataset

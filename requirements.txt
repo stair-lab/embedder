@@ -1,0 +1,2 @@
+pytorch==2.3.1
+flash_attn==2.6.2

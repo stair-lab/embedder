@@ -1,23 +1,31 @@
 ## Embedding funciton
 This python package converts sentences into tokens and passes tokens
-through a model to get the sentence embedding. It's designed to take
-multiple batches containing multiple sentences as input.
+through a model to get the sentence embedding. Designed to take dataloader
+format as input.
 
 ## How to use:
 First, within your environment, install the package.
 ```bash
 pip install git+https://github.com/stair-lab/embedder.git
 ```
-In your script, include the package:
+In your script, include the module:
 ```bash
-from embed_text_package import embed_text
+from embed_text_package.embed_text import Embedder
 ```
 
-Then you can call the get_embeddings() function by
+
+Then you can initialize an embedder, load the model and call it:
+> **_NOTE:_** the load() function will load both, the model and embedder.
 ```bash
-embed_text.get_embeddings(BatchesSentences,model,tokenizer)
+model_name = "<HF_repo>/<HF_model>"
+embdr = Embedder()
+embdr.load(model_name)
+emb = embdr.get_embeddings(dataloader, MODEL_NAME, cols_to_be_embded)
 ```
-Where `BatchesSentences` should be of type `list(list(str))`,`model` should be of type `...tbd...` and `tokenizer` should be of type `...tbd...`
+Where `dataloader` is type `Dataloader`, 
+`model_name` is type `str`.
+`cols_to_be_embded` is type `list` and should contain the names of the columns
+of the dataloader dataset which shall be embedded.
 
 
 ## How to test:
