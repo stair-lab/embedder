@@ -93,20 +93,13 @@ class Embedder:
                 for sentence in batch[col]:
                     # 1) Get Tokens of sentence
 
-                    sentence_tokens = self.tokenizer(sentence)["input_ids"]
+                    tokenized_sentence = self.tokenizer(sentence, return_tensors="pt")
 
                     # 2) Get Embeddings (hiddenstate of last input)
                     # Generate model inputs on same device as self.model
                     # att_mask is vector of ones: Attention on all tokens!
 
-                    tokens = torch.tensor(
-                        [sentence_tokens], device=self.model.device
-                    )
-                    # >>>  sequence_length
-
-                    att_mask = torch.tensor(
-                        [[1] * len(sentence_tokens)], device=self.model.device
-                    )
+                    tokenized_sentence = {k: v.to(self.model.device) for k, v in tokenized_sentence.items()}
                     # >>>  sequence_length
 
                     # get embedding via forward function of main self.model.
@@ -117,7 +110,7 @@ class Embedder:
                     ###########################################################
                     sentence_emb = (
                         self.model.forward(
-                            input_ids=tokens, attention_mask=att_mask
+                            **tokenized_sentence
                         )
                         .last_hidden_state[0][-1]
                         .squeeze()
