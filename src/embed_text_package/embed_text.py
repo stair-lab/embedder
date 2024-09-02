@@ -3,12 +3,12 @@ embed_text package
 """
 
 import gc
+
 import torch
-from tqdm import tqdm
 from datasets import Dataset
 from torch.utils.data import DataLoader
-from transformers import AutoTokenizer
-from transformers import AutoModel
+from tqdm import tqdm
+from transformers import AutoModel, AutoTokenizer
 
 
 class Embedder:
@@ -54,9 +54,7 @@ class Embedder:
         gc.collect()
         torch.cuda.empty_cache()
 
-    def get_embeddings(
-        self, dataloader: DataLoader, model_name: str, cols: list
-    ):
+    def get_embeddings(self, dataloader: DataLoader, model_name: str, cols: list):
         """
         Function converts sentences to sentence embeddings. Designed to take
         dataloader format as input. Dataset of dataloader should contain
@@ -92,14 +90,18 @@ class Embedder:
 
                 for sentence in batch[col]:
                     # 1) Get Tokens of sentence
-
-                    tokenized_sentence = self.tokenizer(sentence, return_tensors="pt")
+                    tokenized_sentence = self.tokenizer(
+                        sentence, add_special_tokens=False, return_tensors="pt"
+                    )
 
                     # 2) Get Embeddings (hiddenstate of last input)
                     # Generate model inputs on same device as self.model
                     # att_mask is vector of ones: Attention on all tokens!
 
-                    tokenized_sentence = {k: v.to(self.model.device) for k, v in tokenized_sentence.items()}
+                    tokenized_sentence = {
+                        k: v.to(self.model.device)
+                        for k, v in tokenized_sentence.items()
+                    }
                     # >>>  sequence_length
 
                     # get embedding via forward function of main self.model.
@@ -109,9 +111,7 @@ class Embedder:
                     # If you want to do that, keep padding in mind!
                     ###########################################################
                     sentence_emb = (
-                        self.model.forward(
-                            **tokenized_sentence
-                        )
+                        self.model.forward(**tokenized_sentence)
                         .last_hidden_state[0][-1]
                         .squeeze()
                         .detach()
