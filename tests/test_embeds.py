@@ -1,11 +1,13 @@
 """
 Tests the embed_text module.
 """
+
 import numpy as np
-from torch.utils.data import DataLoader
-from datasets import load_dataset, Dataset
-from transformers import AutoConfig
+from datasets import Dataset, load_dataset
 from embed_text_package.embed_text import Embedder
+from torch.utils.data import DataLoader
+from transformers import AutoConfig
+
 
 # TEST DIFFERENT MODEL SIZES ITERATIVELY (small --> large)
 # Nested for-loop
@@ -51,8 +53,8 @@ def test_workflow():
             for bs in batch_sizes:
                 print(f"batch_size = {bs}\n")
                 for _ in range(5):
-                    rnd = np.random.randint(low=0, high=len(dataset)-bs*2)
-                    sub_ds = Dataset.from_dict(dataset[rnd:rnd+(bs*2)])
+                    rnd = np.random.randint(low=0, high=len(dataset) - bs * 2)
+                    sub_ds = Dataset.from_dict(dataset[rnd : rnd + (bs * 2)])
 
                     # prepare data
                     dataloader = DataLoader(sub_ds.with_format("torch"), bs)
