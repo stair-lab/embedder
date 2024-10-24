@@ -7,6 +7,7 @@ name = "embed_text_package"
 version = "0.0.1"
 authors = [
   { name="Luca Morlok", email="luca.morlok@stanford.edu" },
+  { name="Martin Nguyen", email="nqduc@cs.stanford.edu" },
 ]
 description = "A small package providing a function for embedding extraction"
 readme = "README.md"

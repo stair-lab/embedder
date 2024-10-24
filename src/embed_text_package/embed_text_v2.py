@@ -8,7 +8,12 @@ import torch
 from datasets import Dataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import AutoModel, AutoTokenizer
+
+from .utils import register_model
+
+register_model()
+
+from vllm import LLM
 
 
 class Embedder:
@@ -20,11 +25,10 @@ class Embedder:
         """
         Initialize class object.
         """
-        self.tokenizer = None
         self.model = None
         self.which_model = None
 
-    def load(self, model_name: str):
+    def load(self, model_name: str, *arg, **kwargs):
         """
         Loads class variables: model and tokenizer.
 
@@ -39,19 +43,14 @@ class Embedder:
         :param which_model: Variable storing the name of the loaded model
         :type which_model: str
         """
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        if not self.tokenizer.pad_token:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.model = AutoModel.from_pretrained(model_name, device_map="auto")
+        self.model = LLM(model=model_name, *arg, **kwargs)
         self.which_model = model_name
 
     def unload(self):
         """
         Unloads class variables: model and tokenizer
         """
-        del self.tokenizer
         del self.model
-        self.tokenizer = None
         self.model = None
         gc.collect()
         torch.cuda.empty_cache()
@@ -86,35 +85,8 @@ class Embedder:
             col_emb = []
             tqdm_dataloader = tqdm(dataloader)
             for batch in tqdm_dataloader:
-                model_inputs = self.tokenizer(
-                    batch[col],
-                    add_special_tokens=False,
-                    return_tensors="pt",
-                    padding=True,
-                )
-                model_inputs = {
-                    k: v.to(self.model.device) for k, v in model_inputs.items()
-                }
-                embeds = self.model(**model_inputs)
-
-                last_idxs = []
-                for i in range(embeds.last_hidden_state.size(0)):
-                    if self.tokenizer.pad_token_id is None:
-                        end_index = -1
-                    else:
-                        end_indexes = (
-                            model_inputs["input_ids"][i] != self.tokenizer.pad_token_id
-                        ).nonzero()
-                        end_index = end_indexes[-1].item() if len(end_indexes) else 0
-
-                    last_idxs.append(end_index)
-
-                embed_last_token = (
-                    embeds.last_hidden_state[list(range(len(last_idxs))), last_idxs]
-                    .cpu()
-                    .tolist()
-                )
-                col_emb.extend(embed_last_token)
+                encoded = self.model.encode(batch[col])
+                col_emb.extend([x.outputs.embedding for x in encoded])
 
             emb_dict[col] = col_emb
             # >>> num_cols x dataset_length x hidden_size
