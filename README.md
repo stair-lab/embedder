@@ -10,7 +10,7 @@ pip install git+https://github.com/stair-lab/embedder.git
 ```
 In your script, include the module:
 ```bash
-from embed_text_package.embed_text import Embedder
+from embed_text_package.embed_text_v2 import Embedder
 ```
 
 
