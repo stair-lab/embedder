@@ -88,7 +88,7 @@ class Embedder:
             for batch in tqdm_dataloader:
                 model_inputs = self.tokenizer(
                     batch[col],
-                    add_special_tokens=False,
+                    # add_special_tokens=False,
                     return_tensors="pt",
                     padding=True,
                 )
