@@ -39,7 +39,7 @@ class DeepseekEmbeddingModel(nn.Module, SupportsPP):
         self.quant_config = quant_config
 
         self.model = DeepseekV2Model(config, cache_config, quant_config, prefix="model")
-        self._pooler = Pooler(pooling_type=PoolingType.LAST, normalize=True)
+        self._pooler = Pooler(pooling_type=PoolingType.LAST, normalize=False)
         self.make_empty_intermediate_tensors = (
             self.model.make_empty_intermediate_tensors
         )
