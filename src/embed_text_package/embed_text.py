@@ -24,7 +24,7 @@ class Embedder:
         self.model = None
         self.which_model = None
 
-    def load(self, model_name: str):
+    def load(self, model_name: str, special_tokens=True):
         """
         Loads class variables: model and tokenizer.
 
@@ -44,6 +44,7 @@ class Embedder:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         self.model = AutoModel.from_pretrained(model_name, device_map="auto")
         self.which_model = model_name
+        self.special_tokens = special_tokens
 
     def unload(self):
         """
@@ -88,7 +89,7 @@ class Embedder:
             for batch in tqdm_dataloader:
                 model_inputs = self.tokenizer(
                     batch[col],
-                    # add_special_tokens=False,
+                    add_special_tokens=self.special_tokens,
                     return_tensors="pt",
                     padding=True,
                 )
